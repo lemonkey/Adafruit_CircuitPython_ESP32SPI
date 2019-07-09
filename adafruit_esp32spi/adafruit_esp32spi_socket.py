@@ -88,6 +88,7 @@ class socket:
         """Attempt to return as many bytes as we can up to but not including '\r\n'"""
         #print("Socket readline")
         stamp = time.monotonic()
+        # print("buffer: ", self._buffer)
         while b'\r\n' not in self._buffer:
             # there's no line already in there, read some more
             avail = min(_the_interface.socket_available(self._socknum), MAX_PACKET)

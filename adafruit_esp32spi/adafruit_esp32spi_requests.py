@@ -159,9 +159,31 @@ def request(method, url, data=None, json=None, headers=None, stream=False, timeo
         host, port = host.split(":", 1)
         port = int(port)
 
+    print("host: ", host)
+    print("port: ", port)
+
     addr_info = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)[0]
+    print("addr_info: ", addr_info)
+
     sock = socket.socket(addr_info[0], addr_info[1], addr_info[2])
+    print("socket: ", socket)
+
     resp = Response(sock)  # our response
+    # print("response: ", resp)
+
+# self.socket = sock
+# self.encoding = "utf-8"
+# self._cached = None
+# self.status_code = None
+# self.reason = None
+# self._read_so_far = 0
+# self.headers = {}
+
+    # if resp:
+    #     print("response headers: ", resp.headers)
+    #     print("response reason: ", resp.reason)
+    #     print("response status code: ", resp.status_code)
+
 
     sock.settimeout(timeout)  # socket read timeout
 
