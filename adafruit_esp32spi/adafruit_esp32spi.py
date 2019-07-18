@@ -251,7 +251,10 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods
     def _wait_spi_char(self, spi, desired):
         """Read a byte with a time-out, and if we get it, check that its what we expect"""
         times = time.monotonic()
-        while (time.monotonic() - times) < 0.1:
+        # while (time.monotonic() - times) < 0.1:
+
+        # local edit 20190717
+        while (time.monotonic() - times) < 1:
             r = self._read_byte(spi)
             if r == _ERR_CMD:
                 raise RuntimeError("Error response to command")
@@ -577,8 +580,11 @@ class ESP_SPIcontrol:  # pylint: disable=too-many-public-methods
         self._socknum_ll[0][0] = socket_num
         resp = self._send_command_get_response(_AVAIL_DATA_TCP_CMD, self._socknum_ll)
         reply = struct.unpack('<H', resp[0])[0]
-        if self._debug:
-            print("ESPSocket: %d bytes available" % reply)
+
+        if reply != 0:
+            if self._debug:
+                print("ESPSocket: %d bytes available" % reply)
+                
         return reply
 
     def socket_read(self, socket_num, size):

@@ -126,6 +126,7 @@ class Response:
             if chunk:
                 yield chunk
             else:
+                print("NO CHUNK")
                 return
 
 # pylint: disable=too-many-branches, too-many-statements, unused-argument, too-many-arguments, too-many-locals
@@ -169,7 +170,7 @@ def request(method, url, data=None, json=None, headers=None, stream=False, timeo
     print("socket: ", socket)
 
     resp = Response(sock)  # our response
-    # print("response: ", resp)
+    print("response: ", resp)
 
 # self.socket = sock
 # self.encoding = "utf-8"
@@ -220,15 +221,20 @@ def request(method, url, data=None, json=None, headers=None, stream=False, timeo
             sock.write(bytes(data, 'utf-8'))
 
         line = sock.readline()
-        #print(line)
+        print("line: ", line)
         line = line.split(None, 2)
         status = int(line[1])
         reason = ""
         if len(line) > 2:
             reason = line[2].rstrip()
+
+        print("status: ", status)
+        print("reason: ", reason)
+
         while True:
             line = sock.readline()
             if not line or line == b"\r\n":
+                print("we're done with request")
                 break
 
             #print("**line: ", line)

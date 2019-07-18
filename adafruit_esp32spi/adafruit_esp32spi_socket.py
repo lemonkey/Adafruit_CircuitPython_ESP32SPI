@@ -67,11 +67,13 @@ class socket:
         self._buffer = b''
         self._socknum = _the_interface.get_socket()
         self.settimeout(0)
+        print("socket created")
 
     def connect(self, address, conntype=None):
         """Connect the socket to the 'address' (which can be 32bit packed IP or
         a hostname string). 'conntype' is an extra that may indicate SSL or not,
         depending on the underlying interface"""
+        print("connecting...")
         host, port = address
         if conntype is None:
             conntype = _the_interface.TCP_MODE
@@ -86,12 +88,14 @@ class socket:
 
     def readline(self):
         """Attempt to return as many bytes as we can up to but not including '\r\n'"""
-        #print("Socket readline")
+        # print("Socket readline")
         stamp = time.monotonic()
         # print("buffer: ", self._buffer)
         while b'\r\n' not in self._buffer:
             # there's no line already in there, read some more
             avail = min(_the_interface.socket_available(self._socknum), MAX_PACKET)
+            if avail != 0:
+                print("avail: ", avail)
             if avail:
                 self._buffer += _the_interface.socket_read(self._socknum, avail)
             elif self._timeout > 0 and time.monotonic() - stamp > self._timeout:
@@ -104,7 +108,7 @@ class socket:
     def read(self, size=0):
         """Read up to 'size' bytes from the socket, this may be buffered internally!
         If 'size' isnt specified, return everything in the buffer."""
-        #print("Socket read", size)
+        # print("Socket read: ", size)
         if size == 0:   # read as much as we can at the moment
             while True:
                 avail = min(_the_interface.socket_available(self._socknum), MAX_PACKET)
@@ -120,20 +124,48 @@ class socket:
         stamp = time.monotonic()
 
         to_read = size - len(self._buffer)
+
+        # print("size: ", size)
+        # print("buffer length: ", len(self._buffer))
+
+        # if this is too short, could end too early and size of file written will not match
+        # the content-length from server...
+        #
+        # read_timeout = 1
+        # read_timeout = self._timeout
+        read_timeout = 8
+
         received = []
         while to_read > 0:
-            #print("Bytes to read:", to_read)
-            avail = min(_the_interface.socket_available(self._socknum), MAX_PACKET)
+            # print("Bytes to read:", to_read)
+            available_bytes = _the_interface.socket_available(self._socknum)
+            
+            # if available_bytes > 0:
+            #     print("available bytes on sock: ", available_bytes)
+
+            # if available_bytes > MAX_PACKET:
+            #     print("Warning: available bytes is > MAX_PACKET: ", MAX_PACKET)
+
+            avail = min(available_bytes, MAX_PACKET)
+            
             if avail:
+                # print("avail: ", avail)
                 stamp = time.monotonic()
                 recv = _the_interface.socket_read(self._socknum, min(to_read, avail))
                 received.append(recv)
                 to_read -= len(recv)
                 gc.collect()
-            if self._timeout > 0 and time.monotonic() - stamp > self._timeout:
+            # else:
+            #     print("nothing left to read! waiting to timeout... ", (time.monotonic() - stamp))
+            #if self._timeout > 0 and time.monotonic() - stamp > self._timeout:
+            if read_timeout > 0 and time.monotonic() - stamp > read_timeout:
+                #print("socket.read timeout ", self._timeout)
+                print("socket.read timeout ", read_timeout)
                 break
         #print(received)
         self._buffer += b''.join(received)
+
+        # print("len(self._buffer) ", len(self._buffer))
 
         ret = None
         if len(self._buffer) == size:
@@ -142,11 +174,16 @@ class socket:
         else:
             ret = self._buffer[:size]
             self._buffer = self._buffer[size:]
+
+        # print("size: ", size)
+        # print("len(ret) ", len(ret))
+
         gc.collect()
         return ret
 
     def settimeout(self, value):
         """Set the read timeout for sockets, if value is 0 it will block"""
+        print("setting timeout: ", value)
         self._timeout = value
 
     def close(self):
