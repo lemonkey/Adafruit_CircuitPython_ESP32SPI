@@ -113,7 +113,14 @@ class socket:
             while True:
                 avail = min(_the_interface.socket_available(self._socknum), MAX_PACKET)
                 if avail:
+                    
+                    # BUG:20190718 memory allocation failed here sometimes due to 
+                    # internal buffering (see function description)
                     self._buffer += _the_interface.socket_read(self._socknum, avail)
+
+                    # 20190718
+                    gc.collect()
+
                 else:
                     break
             gc.collect()
@@ -133,7 +140,7 @@ class socket:
         #
         # read_timeout = 1
         # read_timeout = self._timeout
-        read_timeout = 8
+        read_timeout = 15
 
         received = []
         while to_read > 0:

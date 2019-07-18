@@ -122,12 +122,17 @@ class Response:
             raise NotImplementedError("Unicode not supported")
 
         while True:
-            chunk = self.socket.read(chunk_size)
-            if chunk:
-                yield chunk
-            else:
-                print("NO CHUNK")
+            try:
+                chunk = self.socket.read(chunk_size)
+                if chunk:
+                    yield chunk
+                else:
+                    print("NO CHUNKS LEFT")
+                    return
+            except MemoryError as e:
+                print("MemoryError reading from socket! ", e)
                 return
+
 
 # pylint: disable=too-many-branches, too-many-statements, unused-argument, too-many-arguments, too-many-locals
 def request(method, url, data=None, json=None, headers=None, stream=False, timeout=1):
