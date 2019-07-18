@@ -93,14 +93,22 @@ class socket:
         # print("buffer: ", self._buffer)
         while b'\r\n' not in self._buffer:
             # there's no line already in there, read some more
-            avail = min(_the_interface.socket_available(self._socknum), MAX_PACKET)
-            if avail != 0:
-                print("avail: ", avail)
-            if avail:
-                self._buffer += _the_interface.socket_read(self._socknum, avail)
-            elif self._timeout > 0 and time.monotonic() - stamp > self._timeout:
-                self.close()  # Make sure to close socket so that we don't exhaust sockets.
-                raise RuntimeError("Didn't receive full response, failing out")
+            try:
+                # BUG:20190718 memory allocation failed here sometimes due to 
+                # internal buffering (see function description)
+                avail = min(_the_interface.socket_available(self._socknum), MAX_PACKET)
+                if avail != 0:
+                    print("avail: ", avail)
+                if avail:
+                    self._buffer += _the_interface.socket_read(self._socknum, avail)
+                    # 20190718
+                    gc.collect()
+                elif self._timeout > 0 and time.monotonic() - stamp > self._timeout:
+                    self.close()  # Make sure to close socket so that we don't exhaust sockets.
+                    raise RuntimeError("Didn't receive full response, failing out")
+            except MemoryError as e:
+                print("MemoryError while reading from socket (readline)")
+                break
         firstline, self._buffer = self._buffer.split(b'\r\n', 1)
         gc.collect()
         return firstline
@@ -111,18 +119,22 @@ class socket:
         # print("Socket read: ", size)
         if size == 0:   # read as much as we can at the moment
             while True:
-                avail = min(_the_interface.socket_available(self._socknum), MAX_PACKET)
-                if avail:
-                    
-                    # BUG:20190718 memory allocation failed here sometimes due to 
-                    # internal buffering (see function description)
-                    self._buffer += _the_interface.socket_read(self._socknum, avail)
+                try:
+                    avail = min(_the_interface.socket_available(self._socknum), MAX_PACKET)
+                    if avail:
+                        
+                        # BUG:20190718 memory allocation failed here sometimes due to 
+                        # internal buffering (see function description)
+                        self._buffer += _the_interface.socket_read(self._socknum, avail)
 
-                    # 20190718
-                    gc.collect()
-
-                else:
+                        # 20190718
+                        gc.collect()
+                    else:
+                        break
+                except MemoryError as e:
+                    print("MemoryError while reading from socket (read)")
                     break
+                    
             gc.collect()
             ret = self._buffer
             self._buffer = b''

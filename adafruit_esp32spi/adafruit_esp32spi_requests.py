@@ -225,7 +225,15 @@ def request(method, url, data=None, json=None, headers=None, stream=False, timeo
         if data:
             sock.write(bytes(data, 'utf-8'))
 
-        line = sock.readline()
+        try:
+            line = sock.readline()
+        except MemoryError as e:
+            print("MemoryError while reading line from socket for initial request! ", e)
+            sock.close()
+            resp.status_code = "500"
+            resp.reason = "MemoryError"
+            return resp
+
         print("line: ", line)
         line = line.split(None, 2)
         status = int(line[1])
